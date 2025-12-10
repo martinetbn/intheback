@@ -75,6 +75,9 @@ public class BackpackItem {
                 "§8§oIn The Back"
             ));
 
+            // Prevent backpacks from stacking - each has unique inventory
+            meta.setMaxStackSize(1);
+
             // Mark this item as a backpack and give it a unique ID and level
             PersistentDataContainer container = meta.getPersistentDataContainer();
             container.set(BACKPACK_KEY, PersistentDataType.BOOLEAN, true);
@@ -326,6 +329,9 @@ public class BackpackItem {
                 "§7Size: " + slots + " slots (" + (slots / 9) + " rows)",
                 "§8§oIn The Back"
             ));
+
+            // Prevent backpacks from stacking - each has unique inventory
+            meta.setMaxStackSize(1);
 
             // Update level
             PersistentDataContainer container = meta.getPersistentDataContainer();
