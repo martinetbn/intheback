@@ -6,7 +6,7 @@
 
   <groupId>com.example</groupId>
   <artifactId>in-the-back</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
 
   <name>In The Back</name>
   <description>A Paper plugin that adds craftable backpack functionality to Minecraft</description>
