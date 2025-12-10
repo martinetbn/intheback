@@ -18,14 +18,16 @@ public class MinecraftBackpackPlugin extends JavaPlugin {
 
         // Register crafting recipes
         BackpackRecipe.registerRecipe();
+        BackpackUpgrade.registerUpgradeRecipes();
 
-        getLogger().info("Backpack crafting recipe registered!");
+        getLogger().info("Backpack and upgrade crafting recipes registered!");
     }
 
     @Override
     public void onDisable() {
         // Unregister crafting recipes
         BackpackRecipe.unregisterRecipe();
+        BackpackUpgrade.unregisterUpgradeRecipes();
 
         // Plugin shutdown logic
         getLogger().info("In The Back has been disabled!");

@@ -7,7 +7,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.CraftingInventory;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -48,9 +50,10 @@ public class BackpackListener implements Listener {
 
         // Load backpack contents
         ItemStack[] contents = BackpackItem.loadInventory(itemInHand);
+        int backpackSlots = BackpackItem.getBackpackSlots(itemInHand);
 
-        // Create and open the backpack inventory
-        Inventory backpackInventory = Bukkit.createInventory(player, 27, "Backpack");
+        // Create and open the backpack inventory with the correct size
+        Inventory backpackInventory = Bukkit.createInventory(player, backpackSlots, "Backpack");
         backpackInventory.setContents(contents);
 
         // Track which backpack is being opened
@@ -106,6 +109,58 @@ public class BackpackListener implements Listener {
             plugin.getLogger().info(player.getName() + " closed their backpack - items saved!");
         } else {
             plugin.getLogger().warning(player.getName() + " closed backpack but couldn't find the item to save!");
+        }
+    }
+
+    @EventHandler
+    public void onPrepareItemCraft(PrepareItemCraftEvent event) {
+        CraftingInventory inventory = event.getInventory();
+        ItemStack[] matrix = inventory.getMatrix();
+
+        ItemStack backpack = null;
+        ItemStack upgrade = null;
+        int itemCount = 0;
+
+        // Scan the crafting matrix for exactly one backpack and one upgrade item
+        for (ItemStack item : matrix) {
+            if (item != null && item.getType() != Material.AIR) {
+                itemCount++;
+                if (BackpackItem.isBackpack(item)) {
+                    if (backpack != null) return; // Multiple backpacks
+                    backpack = item;
+                } else if (BackpackUpgrade.isUpgradeItem(item)) {
+                    if (upgrade != null) return; // Multiple upgrades
+                    upgrade = item;
+                } else {
+                    return; // Invalid item in crafting grid
+                }
+            }
+        }
+
+        // Must have exactly 2 items: one backpack and one upgrade
+        if (itemCount != 2 || backpack == null || upgrade == null) {
+            return;
+        }
+
+        int currentLevel = BackpackItem.getBackpackLevel(backpack);
+        int upgradeLevel = BackpackUpgrade.getUpgradeLevel(upgrade);
+
+        // Check if this upgrade can be applied to this backpack
+        if (currentLevel < 0 || upgradeLevel < 1 || currentLevel != upgradeLevel - 1) {
+            return; // Invalid upgrade combination
+        }
+
+        // Create the upgraded backpack
+        ItemStack upgradedBackpack = backpack.clone();
+
+        // Load current contents
+        ItemStack[] contents = BackpackItem.loadInventory(backpack);
+
+        // Apply the upgrade
+        if (BackpackItem.upgradeBackpack(upgradedBackpack)) {
+            // Save the contents to the upgraded backpack
+            BackpackItem.saveInventory(upgradedBackpack, contents);
+            event.getInventory().setResult(upgradedBackpack);
         }
     }
 
