@@ -120,48 +120,54 @@ public class BackpackListener implements Listener {
         ItemStack backpack = null;
         ItemStack upgrade = null;
         int itemCount = 0;
+        boolean hasCustomItem = false;
 
-        // Scan the crafting matrix for exactly one backpack and one upgrade item
+        // Scan the crafting matrix for custom items
         for (ItemStack item : matrix) {
             if (item != null && item.getType() != Material.AIR) {
                 itemCount++;
                 if (BackpackItem.isBackpack(item)) {
-                    if (backpack != null) return; // Multiple backpacks
                     backpack = item;
+                    hasCustomItem = true;
                 } else if (BackpackUpgrade.isUpgradeItem(item)) {
-                    if (upgrade != null) return; // Multiple upgrades
                     upgrade = item;
-                } else {
-                    return; // Invalid item in crafting grid
+                    hasCustomItem = true;
                 }
             }
         }
 
-        // Must have exactly 2 items: one backpack and one upgrade
-        if (itemCount != 2 || backpack == null || upgrade == null) {
+        // If no custom items are involved, let vanilla crafting proceed
+        if (!hasCustomItem) {
             return;
         }
 
-        int currentLevel = BackpackItem.getBackpackLevel(backpack);
-        int upgradeLevel = BackpackUpgrade.getUpgradeLevel(upgrade);
+        // Custom items are in the grid - only allow our specific recipes
+        // Check for valid backpack upgrade: exactly one backpack + one upgrade, nothing else
+        if (itemCount == 2 && backpack != null && upgrade != null) {
+            int currentLevel = BackpackItem.getBackpackLevel(backpack);
+            int upgradeLevel = BackpackUpgrade.getUpgradeLevel(upgrade);
 
-        // Check if this upgrade can be applied to this backpack
-        if (currentLevel < 0 || upgradeLevel < 1 || currentLevel != upgradeLevel - 1) {
-            return; // Invalid upgrade combination
+            // Check if this upgrade can be applied to this backpack
+            if (currentLevel >= 0 && upgradeLevel >= 1 && currentLevel == upgradeLevel - 1) {
+                // Valid upgrade combination - create the upgraded backpack
+                ItemStack upgradedBackpack = backpack.clone();
+
+                // Load current contents
+                ItemStack[] contents = BackpackItem.loadInventory(backpack);
+
+                // Apply the upgrade
+                if (BackpackItem.upgradeBackpack(upgradedBackpack)) {
+                    // Save the contents to the upgraded backpack
+                    BackpackItem.saveInventory(upgradedBackpack, contents);
+                    inventory.setResult(upgradedBackpack);
+                    return;
+                }
+            }
         }
 
-        // Create the upgraded backpack
-        ItemStack upgradedBackpack = backpack.clone();
-
-        // Load current contents
-        ItemStack[] contents = BackpackItem.loadInventory(backpack);
-
-        // Apply the upgrade
-        if (BackpackItem.upgradeBackpack(upgradedBackpack)) {
-            // Save the contents to the upgraded backpack
-            BackpackItem.saveInventory(upgradedBackpack, contents);
-            event.getInventory().setResult(upgradedBackpack);
-        }
+        // If we reach here, custom items are being used in an invalid recipe
+        // Cancel the craft by setting result to null
+        inventory.setResult(null);
     }
 
     /**
