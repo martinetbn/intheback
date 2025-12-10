@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -168,6 +169,43 @@ public class BackpackListener implements Listener {
         // If we reach here, custom items are being used in an invalid recipe
         // Cancel the craft by setting result to null
         inventory.setResult(null);
+    }
+
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        // Check if the clicked inventory is a backpack
+        if (!event.getView().getTitle().equals("Backpack")) {
+            return;
+        }
+
+        Player player = (Player) event.getWhoClicked();
+        ItemStack cursorItem = event.getCursor();
+        ItemStack currentItem = event.getCurrentItem();
+        Inventory clickedInventory = event.getClickedInventory();
+        Inventory topInventory = event.getView().getTopInventory();
+
+        // Check if we're trying to place a backpack into the backpack inventory
+        if (cursorItem != null && BackpackItem.isBackpack(cursorItem) &&
+            clickedInventory != null && clickedInventory.equals(topInventory)) {
+            // Prevent placing backpacks into backpack inventories (top inventory)
+            event.setCancelled(true);
+            return;
+        }
+
+        // Check shift-clicking behavior - determine if item is being moved TO or FROM backpack
+        if (event.isShiftClick() && currentItem != null && BackpackItem.isBackpack(currentItem)) {
+            // Determine which inventory the clicked item is in
+            Inventory bottomInventory = event.getView().getBottomInventory();
+
+            // If the backpack item is in the top inventory (backpack), allow moving it out
+            // If the backpack item is in the bottom inventory (player), prevent moving it in
+            if (clickedInventory != null && clickedInventory.equals(bottomInventory)) {
+                // Player is trying to shift-click a backpack from their inventory INTO the backpack
+                event.setCancelled(true);
+                return;
+            }
+            // If clicked inventory is top inventory, allow moving backpack out (no cancellation needed)
+        }
     }
 
     /**
